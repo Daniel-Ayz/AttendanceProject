@@ -1,8 +1,11 @@
 import datetime
 import os
+import time
+
 import cv2
 import numpy as np
 import face_recognition
+
 
 path = 'ImagesAttendance'
 images = []
@@ -12,7 +15,7 @@ for cl in myList:
     curImg = cv2.imread(f"{path}/{cl}")
     images.append(curImg)
     classNames.append(os.path.splitext(cl)[0])
-print(classNames)
+# print(classNames)
 
 def findEncodings(images):
     encodeList = []
@@ -35,15 +38,16 @@ def markAttendance(name):
             entry = line.strip().split(',')
             if len(entry) > 2 and entry[2] == dateString:
                 nameListToday.append(entry[0])
-        print("today's list", nameListToday)
+        # print("today's list", nameListToday)
         if name not in nameListToday:
             f.writelines('\n')
             f.writelines(f'{name},{timeString},{dateString}')
 
 encodeListKnown = findEncodings(images)
-print('Encoding Complete')
+# print('Encoding Complete')
 
 cap = cv2.VideoCapture(0)
+terminate = False
 
 while True:
     # get image
@@ -57,7 +61,7 @@ while True:
     for encodeFace, faceLoc in zip(encodesCurFrame, facesCurFrame):
         matches = face_recognition.compare_faces(encodeListKnown, encodeFace)
         faceDis = face_recognition.face_distance(encodeListKnown, encodeFace)
-        print(faceDis)
+        # print(faceDis)
         matchIndex = np.argmin(faceDis)
         if matches[matchIndex]:
             name = classNames[matchIndex].upper()
@@ -68,9 +72,14 @@ while True:
             cv2.rectangle(img, (x1, y2-35), (x2, y2), cv2.FILLED)
             cv2.putText(img, name, (x1+6, y2-6), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
             markAttendance(name)
+    #         stop the running
+            terminate = True
+
     # show cam
     cv2.imshow("WebCam", img)
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(1) == ord('q') or terminate:
+        # time.sleep(5)
+        cap.release()
         cv2.destroyAllWindows()
         break
 
